@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudyVault — Premium Learning Portal</title>
+  <meta name="theme-color" content="#FAFAFA" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    window.addEventListener('error', function(e) {
+      console.error(e);
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error(e.reason);
+    });
+  </script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Ambient Background Orbs for Glassmorphism -->
+  <div class="ambient-orb orb-1"></div>
+  <div class="ambient-orb orb-2"></div>
+
+  <!-- NAVBAR -->
+  <nav id="navbar" class="navbar" role="navigation">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo" id="nav-logo-link">
+        <div class="logo-icon">SV</div>
+        <span>StudyVault</span>
+      </a>
+
+      <ul class="nav-links" id="nav-links-container">
+        <div class="nav-liquid-bg" id="nav-liquid-bg"></div>
+        <li><a href="#" class="nav-link active" data-page="home">Home</a></li>
+        <li><a href="#" class="nav-link" data-page="notes">Notes</a></li>
+        <li><a href="#" class="nav-link" data-page="exams">Exams</a></li>
+        <li><a href="#" class="nav-link" data-page="notices">Notices</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <div class="user-badge" id="user-badge" onclick="navigateTo('settings')" style="cursor: pointer;" title="Open Settings">
+          <div class="user-avatar" id="user-avatar-char">?</div>
+          <span class="user-name" id="user-name-text">Loading...</span>
+        </div>
+        <button class="admin-only btn-secondary" id="admin-panel-btn" onclick="openAdminPanel('notes')">+ Upload</button>
+        <button class="btn-secondary" id="sign-out-btn">Sign Out</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="container">
+
+    <!-- HOME PAGE -->
+    <section class="page-section active" id="home">
+      <!-- Home Dashboard Layout -->
+      <div class="home-dashboard">
+        
+        <!-- Left: Hero + Dynamic Content -->
+        <div class="home-main">
+          <div class="premium-hero" style="margin-bottom: 32px;">
+            <div class="hero-content reveal-up">
+              <div class="premium-badge">
+                <span class="badge-dot"></span> The Ultimate Engineering Workspace
+              </div>
+              <h1 class="premium-title">Master your <br/><span class="text-gradient-gold">Curriculum.</span></h1>
+              <p class="premium-desc">StudyVault is your high-end academic hub for conquering core subjects, accessing elite study materials, and tracking your success.</p>
+              <div class="premium-hero-actions">
+                <button class="btn-premium" onclick="navigateTo('notes')">Explore Materials <span class="arrow">→</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:24px; flex-wrap:wrap;">
+            <div class="dash-card reveal-up delay-1" style="flex:1; min-width:250px;">
+              <h3 class="dash-title">Next Upcoming Exam</h3>
+              <div id="dash-exam-content" class="dash-content-area">Loading...</div>
+            </div>
+            <div class="dash-card reveal-up delay-2" style="flex:1; min-width:250px;">
+              <h3 class="dash-title">Latest Notice</h3>
+              <div id="dash-notice-content" class="dash-content-area">Loading...</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Right: ID / Profile Card -->
+        <div class="home-sidebar reveal-up delay-3">
+          <div class="id-card">
+            <div class="id-avatar" id="home-id-avatar">?</div>
+            <h3 class="id-name" id="home-id-name">Student Name</h3>
+            <p class="id-role">Student Profile</p>
+            <div class="id-signature-area">
+              <img src="" alt="" class="id-signature-img hidden" id="home-id-signature">
+              <div class="id-signature-placeholder" id="home-id-signature-ph">No Signature</div>
+            </div>
+            <div class="id-footer" id="home-id-number">Generating ID...</div>
+          </div>
+        </div>
+
+      </div>
+      
+      <!-- 5 Day Warning Exam Alerts -->
+      <div id="home-alerts" style="margin-top: 40px;"></div>
+    </section>
+
+    <!-- NOTES PAGE -->
+    <section class="page-section" id="notes">
+      <div class="section-header reveal-up">
+        <div>
+          <h2 class="section-title">Subject Notes</h2>
+          <p class="section-desc">Access high-quality study materials and PDFs.</p>
+        </div>
+        <div class="filters-wrap">
+          <button class="filter-tab active" data-filter="all">All Subjects</button>
+          <button class="filter-tab" data-filter="dsa">DSA</button>
+          <button class="filter-tab" data-filter="cn">Computer Networks</button>
+          <button class="filter-tab" data-filter="coa">COA</button>
+          <button class="filter-tab" data-filter="vm">Vedic Math</button>
+          <button class="filter-tab" data-filter="os">OS</button>
+          <button class="filter-tab" data-filter="se">Software Engg</button>
+          <button class="filter-tab" data-filter="ap">Applied Physics</button>
+          <button class="filter-tab" data-filter="m1">Math 1</button>
+          <button class="filter-tab" data-filter="m2">Math 2</button>
+          <button class="filter-tab" data-filter="evs">EVS</button>
+        </div>
+      </div>
+      <div class="card-grid" id="notes-grid"></div>
+    </section>
+
+    <!-- EXAMS PAGE -->
+    <section class="page-section" id="exams">
+      <div class="section-header reveal-up">
+        <div>
+          <h2 class="section-title">Exam Papers</h2>
+          <p class="section-desc">Mock tests, previous year papers, and live timed exams.</p>
+        </div>
+        <div class="filters-wrap">
+          <button class="exam-cat-btn filter-tab active" data-cat="all">All</button>
+          <button class="exam-cat-btn filter-tab" data-cat="mock">Mock Tests</button>
+          <button class="exam-cat-btn filter-tab" data-cat="prev">Previous Papers</button>
+          <button class="exam-cat-btn filter-tab" data-cat="assign">Assignments</button>
+        </div>
+      </div>
+      <div class="card-grid" id="exam-grid"></div>
+    </section>
+
+    <!-- NOTICES PAGE -->
+    <section class="page-section" id="notices">
+      <div class="section-header reveal-up">
+        <div>
+          <h2 class="section-title">Notice Board</h2>
+          <p class="section-desc">Important announcements, deadlines, and resources.</p>
+        </div>
+        <div class="filters-wrap">
+          <button class="filter-tab active" data-cat="all">All</button>
+          <button class="filter-tab" data-cat="important">Important</button>
+          <button class="filter-tab" data-cat="resources">Resources</button>
+          <button class="filter-tab" data-cat="deadlines">Deadlines</button>
+        </div>
+      </div>
+      <div class="notices-list" id="notices-list"></div>
+    </section>
+
+    <!-- SETTINGS PAGE -->
+    <section class="page-section" id="settings">
+      <div class="section-header reveal-up">
+        <div>
+          <h2 class="section-title">Account Settings</h2>
+          <p class="section-desc">Manage your profile, preferences, and security.</p>
+        </div>
+      </div>
+      
+      <div class="settings-layout reveal-up delay-1">
+        <!-- Settings Sidebar -->
+        <div class="settings-sidebar">
+          <button class="settings-tab-btn active" data-tab="general" onclick="switchSettingsTab('general')">General</button>
+          <button class="settings-tab-btn" data-tab="profile" onclick="switchSettingsTab('profile')">Profile</button>
+          <button class="settings-tab-btn" data-tab="security" onclick="switchSettingsTab('security')">Privacy & Security</button>
+          <button class="settings-tab-btn" data-tab="notifications" onclick="switchSettingsTab('notifications')">Notifications</button>
+        </div>
+        
+        <!-- Settings Content -->
+        <div class="settings-content">
+          <!-- General -->
+          <div class="settings-panel active" data-panel="general">
+            <h3 class="settings-panel-title">General Preferences</h3>
+            
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>Dark Mode</h4>
+                <p>Toggle between light and dark themes for the portal.</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>Reduce Animations</h4>
+                <p>Disable hover effects and page transitions for faster performance.</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="anim-toggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>Compact View</h4>
+                <p>Decrease spacing in lists and grids to see more content at once.</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="compact-toggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          
+          <!-- Profile -->
+          <div class="settings-panel" data-panel="profile">
+            <h3 class="settings-panel-title">Profile Information</h3>
+            <div class="setting-profile-upload">
+              <div class="avatar-large" id="settings-avatar-preview">?</div>
+              <div class="upload-controls">
+                <label class="btn-secondary" style="cursor:pointer; display:inline-block;">
+                  Upload Photo
+                  <input type="file" id="profile-pic-upload" accept="image/*" style="display:none;" onchange="updateProfilePic(event)">
+                </label>
+                <p class="upload-hint">JPEG or PNG under 2MB.</p>
+              </div>
+            </div>
+
+            <div class="setting-profile-upload" style="margin-top: 20px;">
+              <div class="signature-preview" id="settings-sig-preview">No Signature</div>
+              <div class="upload-controls">
+                <label class="btn-secondary" style="cursor:pointer; display:inline-block;">
+                  Upload Signature
+                  <input type="file" id="profile-sig-upload" accept="image/*" style="display:none;" onchange="updateSignaturePic(event)">
+                </label>
+                <p class="upload-hint">Transparent PNG works best.</p>
+              </div>
+            </div>
+            
+            <div class="admin-form-group" style="margin-top: 24px;">
+              <label class="admin-label">Display Name</label>
+              <input type="text" class="admin-input" id="profile-name" placeholder="Enter your full name">
+            </div>
+            <div class="admin-form-group">
+              <label class="admin-label">Short Bio</label>
+              <textarea class="admin-input" id="profile-bio" rows="3" placeholder="Tell us about yourself..."></textarea>
+            </div>
+            <button class="admin-submit-btn" style="width: auto; padding: 12px 24px;" onclick="saveProfile()">Save Changes</button>
+          </div>
+          
+          <!-- Security -->
+          <div class="settings-panel" data-panel="security">
+            <h3 class="settings-panel-title">Privacy & Security</h3>
+            
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>Two-Factor Authentication (2FA)</h4>
+                <p>Require an extra security code when logging in.</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>Public Profile</h4>
+                <p>Allow other students to see your display name and bio.</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="admin-form-group" style="margin-top: 24px;">
+              <button class="btn-secondary" style="color: #dc2626; border-color: rgba(220,38,38,0.2);" onclick="changePassword()">Change Password</button>
+            </div>
+          </div>
+          
+          <!-- Notifications -->
+          <div class="settings-panel" data-panel="notifications">
+            <h3 class="settings-panel-title">Email Notifications</h3>
+            
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>Exam Reminders</h4>
+                <p>Get an email 24 hours before a live exam starts.</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4>New Notes & Materials</h4>
+                <p>Notify me when new study notes are uploaded for my subjects.</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- EXAM TIMER OVERLAY -->
+  <div class="exam-active-overlay hidden" id="exam-overlay">
+    <div class="exam-topbar">
+      <div style="font-weight: 700;">Live Exam</div>
+      <div>Time Remaining: <span class="exam-timer" id="exam-timer-display">--:--</span></div>
+      <button class="exam-submit-btn" onclick="submitExam()">Submit Exam</button>
+    </div>
+    <iframe class="exam-frame" id="exam-frame" src=""></iframe>
+  </div>
+
+  <!-- GENERIC FILE VIEWER OVERLAY -->
+  <div class="exam-active-overlay hidden" id="file-viewer-overlay">
+    <div class="exam-topbar">
+      <div style="font-weight: 700;" id="file-viewer-title">Document Preview</div>
+      <button class="exam-submit-btn" style="background: var(--text-2);" onclick="closeFileViewer()">Close</button>
+    </div>
+    <iframe class="exam-frame" id="file-viewer-frame" src=""></iframe>
+  </div>
+
+  <!-- ADMIN FAB -->
+  <button class="admin-fab admin-only" id="admin-fab-btn" onclick="openAdminPanel('notes')">
+    Admin Upload
+  </button>
+
+  <!-- ADMIN MODAL -->
+  <div class="admin-modal" id="admin-modal">
+    <div class="admin-modal-box">
+      <div class="admin-modal-header">
+        <h2 class="admin-modal-title">Admin Panel</h2>
+        <button class="admin-close-btn" onclick="closeAdminPanel()">&times;</button>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" data-tab="notes" onclick="switchAdminTab('notes')">Upload Note</button>
+        <button class="admin-tab-btn" data-tab="exams" onclick="switchAdminTab('exams')">Upload Exam</button>
+        <button class="admin-tab-btn" data-tab="notices" onclick="switchAdminTab('notices')">Post Notice</button>
+        <button class="admin-tab-btn" data-tab="responses" onclick="switchAdminTab('responses')">View Responses</button>
+      </div>
+
+      <div class="admin-modal-body">
+        
+        <!-- Upload Note -->
+        <div class="admin-tab-panel active" data-panel="notes" id="admin-panel-notes">
+          <div class="admin-form-group">
+            <label class="admin-label">Note Title *</label>
+            <input type="text" id="an-title" class="admin-input" placeholder="e.g. Data Structures Chapter 1" />
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-label">Subject *</label>
+            <select id="an-subject" class="admin-select">
+              <option value="dsa">DSA</option>
+              <option value="cn">Computer Networks</option>
+              <option value="coa">COA</option>
+              <option value="vm">Vedic Math</option>
+              <option value="os">OS</option>
+              <option value="se">Software Engg</option>
+              <option value="ap">Applied Physics</option>
+              <option value="m1">Math 1</option>
+              <option value="m2">Math 2</option>
+              <option value="evs">EVS</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-label">Upload File (PDF) *</label>
+            <input type="file" id="an-file" class="admin-file-input" accept=".pdf,.doc,.docx" />
+          </div>
+          <button class="admin-submit-btn" id="upload-note-btn" onclick="uploadNote()">Upload Note</button>
+        </div>
+
+        <!-- Upload Exam -->
+        <div class="admin-tab-panel" data-panel="exams" id="admin-panel-exams">
+          <div class="admin-form-group">
+            <label class="admin-label">Exam Title *</label>
+            <input type="text" id="ae-title" class="admin-input" placeholder="e.g. DSA Midterm Mock" />
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-label">Category *</label>
+            <select id="ae-cat" class="admin-select">
+              <option value="mock">Mock Test</option>
+              <option value="prev">Previous Year</option>
+              <option value="assign">Assignment</option>
+            </select>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-label">Subject ID (e.g. dsa, cn, m1) *</label>
+            <input type="text" id="ae-subject" class="admin-input" placeholder="dsa" />
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-label">Exam Date & Time (for scheduled start/warning) *</label>
+            <input type="datetime-local" id="ae-date" class="admin-input" />
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-label">Duration in Minutes (0 for no timer) *</label>
+            <input type="number" id="ae-duration" class="admin-input" placeholder="60" value="0" />
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-label">Upload Paper (PDF) *</label>
+            <input type="file" id="ae-file" class="admin-file-input" accept=".pdf" />
+          </div>
+          <button class="admin-submit-btn" id="upload-exam-btn" onclick="uploadExam()">Upload Exam</button>
+        </div>
+
+        <!-- Post Notice -->
+        <div class="admin-tab-panel" data-panel="notices" id="admin-panel-notices">
+          <div class="admin-form-group">
+            <label class="admin-label">Notice Title *</label>
+            <input type="text" id="anot-title" class="admin-input" placeholder="e.g. Schedule Update" />
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-label">Notice Category *</label>
+            <select id="anot-type" class="admin-select">
+              <option value="important">Important</option>
+              <option value="resources">Resources</option>
+              <option value="deadlines">Deadlines</option>
+            </select>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-label">Message Body *</label>
+            <textarea id="anot-body" class="admin-input" style="min-height:100px;" placeholder="Message content..."></textarea>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-label">External Link URL (Optional)</label>
+            <input type="url" id="anot-link" class="admin-input" placeholder="https://..." />
+          </div>
+          <button class="admin-submit-btn" id="post-notice-btn" onclick="uploadNotice()">Post Notice</button>
+        </div>
+
+        <!-- View Responses -->
+        <div class="admin-tab-panel" data-panel="responses" id="admin-panel-responses">
+          <div style="font-size: 0.9rem; margin-bottom: 16px;">Here you can see the exam submissions from users.</div>
+          <button class="admin-submit-btn" onclick="loadExamResponses()" style="margin-bottom: 16px;">Refresh Responses</button>
+          <div id="admin-responses-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
