@@ -9,6 +9,7 @@ import { supabase, getCurrentUser, isAdmin, signOut, ADMIN_EMAIL } from './supab
 /* ─── GLOBALS ────────────────────────────────────────── */
 let currentPage = 'home';
 let currentUser  = null;
+let userProfile = null;
 let adminMode    = false;
 let activeExamTimer = null;
 
@@ -31,6 +32,11 @@ async function initAuth() {
   currentUser = await getCurrentUser();
   if (!currentUser) { window.location.href = 'login.html'; return; }
   adminMode = currentUser.email === ADMIN_EMAIL;
+  
+  if (adminMode) {
+    checkAdminNotifications();
+    setInterval(checkAdminNotifications, 15000); // Poll every 15 seconds
+  }
 
   const uname = qs('#user-name-text');
   const uav   = qs('#user-avatar-char');
@@ -50,16 +56,80 @@ async function initAuth() {
     const nums = Math.floor(1000 + Math.random() * 9000);
     const newId = `${year}${letters}${nums}`; // e.g. 26KPB2431
     
-    await supabase.from('profiles').upsert({ ...(profile || {}), id: currentUser.id, student_id: newId });
-    profile = { ...(profile || {}), student_id: newId };
+    await supabase.from('profiles').upsert({ ...(profile || {}), id: currentUser.id, student_id: newId, subscription_tier: 'free' });
+    profile = { ...(profile || {}), student_id: newId, subscription_tier: 'free' };
   }
+  
+  userProfile = profile;
   
   const idFooter = qs('#home-id-number');
   if (idFooter) idFooter.textContent = 'ID: ' + profile.student_id;
   
+  const tierDisplay = qs('#home-detail-tier');
+  if (tierDisplay) {
+    let tierText = "Free Access";
+    if (userProfile.subscription_tier === 'lite') tierText = "Lite Version";
+    if (userProfile.subscription_tier === 'pro') tierText = "VIP Pro Version";
+    tierDisplay.textContent = tierText;
+  }
+  
+  // Premium Page Buttons Logic
+  const btnLite = qs('#sub-btn-lite');
+  const btnPro = qs('#sub-btn-pro');
+  if (btnLite && btnPro) {
+    if (userProfile.subscription_tier === 'pro') {
+      btnLite.textContent = "Current Plan";
+      btnLite.disabled = true;
+      btnLite.style.opacity = '0.5';
+      btnLite.style.cursor = 'not-allowed';
+      
+      btnPro.textContent = "Current Plan";
+      btnPro.disabled = true;
+      btnPro.style.opacity = '0.5';
+      btnPro.style.cursor = 'not-allowed';
+    } else if (userProfile.subscription_tier === 'lite') {
+      btnLite.textContent = "Current Plan";
+      btnLite.disabled = true;
+      btnLite.style.opacity = '0.5';
+      btnLite.style.cursor = 'not-allowed';
+      
+      btnPro.textContent = "Upgrade to Pro (Rs 119)";
+    }
+  }
+  
+  // Settings Membership Logic
+  const setPlan = qs('#settings-current-plan');
+  const setExpiry = qs('#settings-plan-expiry');
+  const cancelBox = qs('#cancel-sub-box');
+  const refAmt = qs('#refund-amount');
+  
+  if (setPlan) {
+    if (userProfile.subscription_tier === 'pro') {
+      setPlan.textContent = "VIP Pro Version";
+      setExpiry.textContent = `Valid until ${fmt(userProfile.subscription_expiry)}`;
+      cancelBox.classList.remove('hidden');
+      refAmt.textContent = "Rs 179";
+    } else if (userProfile.subscription_tier === 'lite') {
+      setPlan.textContent = "Lite Version";
+      setExpiry.textContent = `Valid until ${fmt(userProfile.subscription_expiry)}`;
+      cancelBox.classList.remove('hidden');
+      refAmt.textContent = "Rs 89";
+    } else {
+      setPlan.textContent = "Free Access";
+      setExpiry.textContent = "Never expires";
+      cancelBox.classList.add('hidden');
+    }
+  }
+  
   const displayName = profile?.display_name || currentUser.email.split('@')[0];
   if (uname) uname.textContent = adminMode ? 'Admin' : displayName;
   if (homeName) homeName.textContent = adminMode ? 'Admin' : displayName;
+  
+  const heroName = qs('#hero-name');
+  if (heroName) heroName.textContent = adminMode ? 'Admin' : displayName;
+  
+  const detailEmail = qs('#home-detail-email');
+  if (detailEmail) detailEmail.textContent = currentUser.email;
   
   const applyAvatar = (el) => {
     if (!el) return;
@@ -90,7 +160,7 @@ async function initAuth() {
 
   if (adminMode) {
     qsa('.admin-only').forEach(el => {
-      if (el.classList.contains('admin-fab')) {
+      if (el.classList.contains('admin-fab') || el.id === 'admin-notif-bell') {
         el.style.display = 'flex';
       } else {
         el.style.display = 'block';
@@ -365,7 +435,9 @@ async function loadNotices() {
 }
 
 /* ── FILE VIEWER ─────────────────────────────────────── */
-window.openFileViewer = function(url, title) {
+window.openFileViewer = function(url, title, requiredTier = 'lite') {
+  if (!checkPremiumAccess(requiredTier)) return;
+  
   const overlay = qs('#file-viewer-overlay');
   const frame = qs('#file-viewer-frame');
   const titleEl = qs('#file-viewer-title');
@@ -554,11 +626,37 @@ async function loadSettings() {
 
 /* ── EXAM ENGINE ─────────────────────────────────────── */
 window.startExam = function(id, url, durationMinutes, title, subject) {
+  if (!checkPremiumAccess('lite')) return;
+  
   const overlay = qs('#exam-overlay');
   const frame = qs('#exam-frame');
   const timerEl = qs('#exam-timer-display');
   
   if (!overlay || !frame) return;
+
+  // Absolute Timer Enforcement
+  let timeLeft = 0;
+  if (durationMinutes && durationMinutes > 0) {
+    const attemptKey = `exam_start_${id}_${currentUser?.id || 'guest'}`;
+    let startTime = localStorage.getItem(attemptKey);
+    if (!startTime) {
+      startTime = Date.now();
+      localStorage.setItem(attemptKey, startTime);
+    }
+    
+    const durationMs = durationMinutes * 60 * 1000;
+    const elapsed = Date.now() - parseInt(startTime);
+    timeLeft = Math.floor((durationMs - elapsed) / 1000);
+
+    if (timeLeft <= 0) {
+      frame.dataset.examId = id;
+      frame.dataset.examTitle = title;
+      frame.dataset.subject = subject;
+      submitExam();
+      showToast('The time limit for this exam has already expired!', 'error');
+      return;
+    }
+  }
   
   frame.src = url;
   frame.dataset.examId = id;
@@ -571,14 +669,18 @@ window.startExam = function(id, url, durationMinutes, title, subject) {
   if (activeExamTimer) clearInterval(activeExamTimer);
   
   if (durationMinutes && durationMinutes > 0) {
-    let timeLeft = durationMinutes * 60;
     timerEl.parentElement.classList.remove('hidden');
+    
+    // Initial paint
+    const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const s = (timeLeft % 60).toString().padStart(2, '0');
+    timerEl.textContent = `${m}:${s}`;
     
     activeExamTimer = setInterval(() => {
       timeLeft--;
-      const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-      const s = (timeLeft % 60).toString().padStart(2, '0');
-      timerEl.textContent = `${m}:${s}`;
+      const mm = Math.floor(Math.max(0, timeLeft) / 60).toString().padStart(2, '0');
+      const ss = (Math.max(0, timeLeft) % 60).toString().padStart(2, '0');
+      timerEl.textContent = `${mm}:${ss}`;
       
       if (timeLeft <= 0) {
         clearInterval(activeExamTimer);
@@ -652,6 +754,7 @@ window.switchAdminTab = function(tab) {
   qsa('.admin-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   qsa('.admin-tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
   if (tab === 'responses') loadExamResponses();
+  if (tab === 'approvals') loadPendingPayments();
 };
 
 window.loadExamResponses = async function() {
@@ -776,6 +879,71 @@ window.showToast = function(msg, type='info') {
 };
 
 /* ═══════════════════════════════════════════════════════
+   PREMIUM AI CHATBOT (DEMO MODE)
+═══════════════════════════════════════════════════════ */
+window.toggleChat = function() {
+  if (!checkPremiumAccess('lite')) return;
+  
+  const cw = document.getElementById('chat-window');
+  if (cw.classList.contains('hidden')) {
+    cw.classList.remove('hidden');
+    document.getElementById('chat-input').focus();
+  } else {
+    cw.classList.add('hidden');
+  }
+};
+
+window.sendChatMessage = async function() {
+  const input = document.getElementById('chat-input');
+  const msgs = document.getElementById('chat-messages');
+  const txt = input.value.trim();
+  if (!txt) return;
+
+  // Add User message
+  const userMsg = document.createElement('div');
+  userMsg.className = 'chat-msg user';
+  userMsg.textContent = txt;
+  msgs.appendChild(userMsg);
+  
+  input.value = '';
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Add a temporary "typing..." indicator
+  const aiMsg = document.createElement('div');
+  aiMsg.className = 'chat-msg ai';
+  aiMsg.textContent = "Thinking...";
+  msgs.appendChild(aiMsg);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {
+    if (!supabase) throw new Error("Supabase is not connected.");
+
+    // Call the secure Supabase Edge Function
+    const { data, error } = await supabase.functions.invoke('chat', {
+      body: { query: txt }
+    });
+
+    if (error) {
+      throw new Error(error.message || "Failed to reach the AI server.");
+    }
+    
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
+    // Display the answer from the Edge Function
+    const answer = data.answer || "I'm sorry, I couldn't process that.";
+    aiMsg.innerHTML = answer.replace(/\n/g, '<br>');
+
+  } catch (err) {
+    console.error("AI Error:", err);
+    aiMsg.textContent = "Error: " + err.message;
+  }
+  
+  msgs.scrollTop = msgs.scrollHeight;
+};
+
+/* ═══════════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
@@ -788,3 +956,208 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadHomeDashboard();
   }, 100);
 });
+
+// ─── PREMIUM SUBSCRIPTION & LOCKS ──────────────────────────────
+window.checkPremiumAccess = function(requiredTier = 'lite') {
+  if (adminMode) return true;
+  if (!userProfile) return false;
+  
+  const tier = userProfile.subscription_tier || 'free';
+  if (tier === 'pro') return true; // Pro has access to everything
+  if (tier === 'lite' && requiredTier === 'lite') return true;
+  
+  showToast('🔒 This content requires a ' + requiredTier.toUpperCase() + ' or PRO subscription.', 'error');
+  setTimeout(() => navigateTo('premium'), 1500);
+  return false;
+};
+
+let selectedTier = 'lite';
+
+window.startSubscription = async function(tier) {
+  if (adminMode) {
+    showToast('Admin accounts automatically have God-Mode. No payment required.', 'success');
+    return;
+  }
+  
+  // Check if they already have a pending request
+  const { count } = await supabase.from('pending_payments').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('status', 'pending');
+  if (count > 0) {
+    showToast('You already have a pending request! Please wait for Admin approval.', 'error');
+    return;
+  }
+
+  selectedTier = tier;
+  const overlay = qs('#payment-overlay');
+  
+  const upiVPA = '8159813896-4@ybl'; // Replace with real merchant UPI ID
+  let amountStr = '99.00';
+  
+  if (tier === 'pro') {
+    amountStr = userProfile?.subscription_tier === 'lite' ? '119.00' : '199.00';
+    qs('#payment-amount').textContent = 'Rs ' + Math.floor(parseFloat(amountStr));
+    qs('#payment-subtitle').textContent = userProfile?.subscription_tier === 'lite' ? 'Pro Upgrade (from Lite)' : 'VIP Pro Version';
+  } else {
+    amountStr = '99.00';
+    qs('#payment-amount').textContent = 'Rs 99';
+    qs('#payment-subtitle').textContent = 'Lite Version';
+  }
+  
+  // Generate real UPI Intent QR Code
+  const upiString = `upi://pay?pa=${upiVPA}&pn=StudyVault&am=${amountStr}&cu=INR`;
+  qs('#payment-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
+  
+  qs('#payment-utr').value = ''; // Clear previous UTR
+  overlay.classList.remove('hidden');
+};
+
+window.closePaymentModal = function() {
+  qs('#payment-overlay').classList.add('hidden');
+};
+
+window.processPayment = async function() {
+  const utrInput = qs('#payment-utr').value.trim();
+  if (!utrInput || utrInput.length < 6) {
+    showToast('Please enter a valid UTR / Reference No. from your UPI app.', 'error');
+    return;
+  }
+
+  const btn = qs('#pay-now-btn');
+  btn.textContent = "Verifying Payment...";
+  btn.style.opacity = '0.7';
+  btn.style.pointerEvents = 'none';
+  
+  // Simulate network delay for realism
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  // Submit to Admin Approval
+  const { error } = await supabase.from('pending_payments').insert({
+    user_id: currentUser.id,
+    user_email: currentUser.email,
+    tier: selectedTier,
+    utr: utrInput,
+    status: 'pending'
+  });
+  
+  btn.textContent = "Verify Payment";
+  btn.style.opacity = '1';
+  btn.style.pointerEvents = 'auto';
+  
+  if (error) {
+    showToast('Error submitting payment: ' + error.message, 'error');
+  } else {
+    showToast('Payment submitted! Admin will verify your UTR shortly.', 'success');
+    closePaymentModal();
+  }
+};
+
+window.requestCancellation = async function() {
+  if (!confirm('Are you sure you want to request a cancellation and refund?')) return;
+  
+  // Check for existing pending requests
+  const { count } = await supabase.from('pending_payments').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('status', 'pending');
+  if (count > 0) {
+    showToast('You already have a pending request with the Admin.', 'error');
+    return;
+  }
+  
+  const refundAmount = userProfile.subscription_tier === 'pro' ? 'Rs 179' : 'Rs 89';
+  const { error } = await supabase.from('pending_payments').insert({
+    user_id: currentUser.id,
+    user_email: currentUser.email,
+    tier: 'cancel_' + userProfile.subscription_tier,
+    utr: `Refund Request: ${refundAmount}`,
+    status: 'pending'
+  });
+  
+  if (error) {
+    showToast('Error requesting cancellation: ' + error.message, 'error');
+  } else {
+    showToast('Cancellation request sent to Admin. You will be refunded shortly.', 'success');
+  }
+};
+
+window.loadPendingPayments = async function() {
+  const list = qs('#admin-approvals-list');
+  if (!list) return;
+  
+  const { data, error } = await supabase.from('pending_payments').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+  if (error) {
+    list.innerHTML = `<div class="error-state">Error: ${error.message}</div>`;
+    return;
+  }
+  
+  if (!data || data.length === 0) {
+    list.innerHTML = `<div class="empty-state">No pending payments.</div>`;
+    return;
+  }
+  
+  list.innerHTML = data.map(p => `
+    <div style="background: var(--bg-2); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span style="font-weight: bold; color: var(--text-1);">${escHtml(p.user_email)}</span>
+        <span style="background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${p.tier.toUpperCase()}</span>
+      </div>
+      <div style="font-size: 0.9rem; color: var(--text-2); margin-bottom: 12px;">
+        UTR: <strong style="color: var(--text-1);">${escHtml(p.utr)}</strong> <br/>
+        Date: ${fmt(p.created_at)}
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="admin-submit-btn" style="flex: 1; padding: 8px;" onclick="handlePaymentApproval('${p.id}', '${p.user_id}', '${p.tier}', 'approved')">Approve</button>
+        <button class="btn-secondary" style="flex: 1; padding: 8px; border-color: red; color: red;" onclick="handlePaymentApproval('${p.id}', '${p.user_id}', '${p.tier}', 'rejected')">Reject</button>
+      </div>
+    </div>
+  `).join('');
+};
+
+window.handlePaymentApproval = async function(paymentId, userId, tier, action) {
+  if (!confirm(`Are you sure you want to ${action} this payment?`)) return;
+  
+  // Update status in pending_payments
+  const { error: pErr } = await supabase.from('pending_payments').update({ status: action }).eq('id', paymentId);
+  if (pErr) return showToast('Error updating payment: ' + pErr.message, 'error');
+  
+  if (action === 'approved') {
+    if (tier.startsWith('cancel_')) {
+      // Process Cancellation
+      const { error: uErr } = await supabase.from('profiles').update({ 
+        subscription_tier: 'free',
+        subscription_expiry: null
+      }).eq('id', userId);
+      
+      if (uErr) return showToast('Error downgrading user: ' + uErr.message, 'error');
+      showToast('Cancellation Approved! Refund initiated and user downgraded.', 'success');
+    } else {
+      // Calculate expiry (1 month from now)
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + 1);
+      
+      // Grant the tier
+      const { error: uErr } = await supabase.from('profiles').update({ 
+        subscription_tier: tier,
+        subscription_expiry: expiryDate.toISOString()
+      }).eq('id', userId);
+      
+      if (uErr) return showToast('Error upgrading user: ' + uErr.message, 'error');
+      showToast(`Payment Approved! User upgraded to ${tier}.`, 'success');
+    }
+  } else {
+    showToast('Payment Rejected.', 'success');
+  }
+  
+  loadPendingPayments();
+  checkAdminNotifications(); // Update badge
+};
+
+window.checkAdminNotifications = async function() {
+  if (!adminMode) return;
+  const badge = qs('#admin-notif-badge');
+  if (!badge) return;
+  
+  const { count, error } = await supabase.from('pending_payments').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+  if (error || count === 0) {
+    badge.classList.add('hidden');
+  } else {
+    badge.textContent = count;
+    badge.classList.remove('hidden');
+  }
+};

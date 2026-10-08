@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#FAFAFA" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Pacifico&family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet" />
   <script>
     window.addEventListener('error', function(e) {
       console.error(e);
@@ -38,6 +38,7 @@
         <li><a href="#" class="nav-link" data-page="notes">Notes</a></li>
         <li><a href="#" class="nav-link" data-page="exams">Exams</a></li>
         <li><a href="#" class="nav-link" data-page="notices">Notices</a></li>
+        <li><a href="#" class="nav-link nav-premium" data-page="premium">★ Premium</a></li>
       </ul>
 
       <div class="nav-actions">
@@ -46,6 +47,10 @@
           <span class="user-name" id="user-name-text">Loading...</span>
         </div>
         <button class="admin-only btn-secondary" id="admin-panel-btn" onclick="openAdminPanel('notes')">+ Upload</button>
+        <button class="admin-only" id="admin-notif-bell" onclick="openAdminPanel('approvals')" style="background: none; border: none; cursor: pointer; position: relative; color: var(--text-2); padding: 8px; align-items: center; justify-content: center; transition: color 0.2s;" onmouseover="this.style.color='var(--text-1)'" onmouseout="this.style.color='var(--text-2)'">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span id="admin-notif-badge" class="hidden" style="position: absolute; top: 0px; right: 0px; background: red; color: white; border-radius: 50%; padding: 2px 5px; font-size: 0.65rem; font-weight: bold; border: 2px solid var(--bg);">0</span>
+        </button>
         <button class="btn-secondary" id="sign-out-btn">Sign Out</button>
       </div>
     </div>
@@ -62,11 +67,15 @@
         <!-- Left: Hero + Dynamic Content -->
         <div class="home-main">
           <div class="premium-hero" style="margin-bottom: 32px;">
-            <div class="hero-content reveal-up">
+            <div class="hero-visual-area">
+              <div class="hero-massive-bg">STUDY</div>
+            </div>
+            <div class="hero-content reveal-up delay-1">
               <div class="premium-badge">
                 <span class="badge-dot"></span> The Ultimate Engineering Workspace
               </div>
-              <h1 class="premium-title">Master your <br/><span class="text-gradient-gold">Curriculum.</span></h1>
+              <h2 class="stylish-greeting" id="hero-greeting">Welcome back, <br/><span class="curvy-name gradient-colorful" id="hero-name">Student</span></h2>
+              <h1 class="premium-title" style="margin-top: 16px;">Master your <br/><span class="text-gradient-gold">Curriculum.</span></h1>
               <p class="premium-desc">StudyVault is your high-end academic hub for conquering core subjects, accessing elite study materials, and tracking your success.</p>
               <div class="premium-hero-actions">
                 <button class="btn-premium" onclick="navigateTo('notes')">Explore Materials <span class="arrow">→</span></button>
@@ -86,7 +95,7 @@
           </div>
         </div>
         
-        <!-- Right: ID / Profile Card -->
+        <!-- Right: ID / Profile Card & Details -->
         <div class="home-sidebar reveal-up delay-3">
           <div class="id-card">
             <div class="id-avatar" id="home-id-avatar">?</div>
@@ -97,6 +106,28 @@
               <div class="id-signature-placeholder" id="home-id-signature-ph">No Signature</div>
             </div>
             <div class="id-footer" id="home-id-number">Generating ID...</div>
+          </div>
+
+          <!-- New User Details Card -->
+          <div class="user-details-card">
+            <h4 class="details-heading">Account Information</h4>
+            
+            <div class="detail-row">
+              <span class="detail-label">Email</span>
+              <span class="detail-value" id="home-detail-email">student@example.com</span>
+            </div>
+            
+            <div class="detail-row">
+              <span class="detail-label">Status</span>
+              <span class="detail-value">
+                <span class="status-dot"></span> Active
+              </span>
+            </div>
+            
+            <div class="detail-row">
+              <span class="detail-label">Membership</span>
+              <span class="detail-value" id="home-detail-tier" style="color: var(--accent); font-weight: 700;">Loading...</span>
+            </div>
           </div>
         </div>
 
@@ -164,6 +195,48 @@
       <div class="notices-list" id="notices-list"></div>
     </section>
 
+    <!-- PREMIUM PAGE -->
+    <section class="page-section" id="premium">
+      <div class="section-header reveal-up">
+        <div style="text-align: center; width: 100%;">
+          <h2 class="section-title">Upgrade Your Learning</h2>
+          <p class="section-desc" style="max-width: 600px; margin: 0 auto;">Unlock advanced features, priority support, and exclusive study materials.</p>
+        </div>
+      </div>
+      
+      <div class="pricing-grid reveal-up delay-1">
+        <!-- Lite Tier -->
+        <div class="pricing-card lite">
+          <h3 class="pricing-name">Lite Version</h3>
+          <div class="pricing-price">Rs 99<span class="period">/mo</span></div>
+          <p class="pricing-desc">Essential tools for the dedicated student.</p>
+          <ul class="pricing-features">
+            <li>✔ Access to all basic notes</li>
+            <li>✔ Unlimited Mock Exams</li>
+            <li>✔ Standard AI Tutor</li>
+            <li>✔ Community Forums</li>
+          </ul>
+          <button id="sub-btn-lite" class="btn-secondary" style="width:100%; margin-top:24px; padding:12px; font-size:1rem;" onclick="startSubscription('lite')">Subscribe to Lite</button>
+        </div>
+
+        <!-- Pro Tier -->
+        <div class="pricing-card pro">
+          <div class="popular-badge">Most Popular</div>
+          <h3 class="pricing-name">Pro Version</h3>
+          <div class="pricing-price">Rs 199<span class="period">/mo</span></div>
+          <p class="pricing-desc">The ultimate advantage for top grades.</p>
+          <ul class="pricing-features">
+            <li>✔ Everything in Lite</li>
+            <li>✔ Exclusive VIP Notes & Summaries</li>
+            <li>✔ God-Mode AI Tutor (GPT-4 / Flash)</li>
+            <li>✔ Detailed Analytics & Tracking</li>
+            <li>✔ 1-on-1 Mentorship Sessions</li>
+          </ul>
+          <button id="sub-btn-pro" class="btn-premium" style="width:100%; margin-top:24px; padding:12px; font-size:1rem;" onclick="startSubscription('pro')">Subscribe to Pro</button>
+        </div>
+      </div>
+    </section>
+
     <!-- SETTINGS PAGE -->
     <section class="page-section" id="settings">
       <div class="section-header reveal-up">
@@ -178,12 +251,32 @@
         <div class="settings-sidebar">
           <button class="settings-tab-btn active" data-tab="general" onclick="switchSettingsTab('general')">General</button>
           <button class="settings-tab-btn" data-tab="profile" onclick="switchSettingsTab('profile')">Profile</button>
+          <button class="settings-tab-btn" data-tab="membership" onclick="switchSettingsTab('membership')">Membership</button>
           <button class="settings-tab-btn" data-tab="security" onclick="switchSettingsTab('security')">Privacy & Security</button>
           <button class="settings-tab-btn" data-tab="notifications" onclick="switchSettingsTab('notifications')">Notifications</button>
         </div>
         
         <!-- Settings Content -->
         <div class="settings-content">
+          <!-- Membership -->
+          <div class="settings-panel" data-panel="membership">
+            <h3 class="settings-panel-title">Membership & Billing</h3>
+            
+            <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 16px;">
+              <div class="setting-info" style="width: 100%;">
+                <h4>Current Plan</h4>
+                <p id="settings-current-plan" style="font-size: 1.1rem; font-weight: 700; color: var(--accent); margin-top: 8px;">Free Access</p>
+                <p id="settings-plan-expiry" style="font-size: 0.85rem; color: var(--text-3); margin-top: 4px;">Never expires</p>
+              </div>
+              
+              <div id="cancel-sub-box" class="hidden" style="width: 100%; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); padding: 16px; border-radius: 8px;">
+                <h4 style="color: #EF4444; margin-bottom: 8px;">Cancel Subscription</h4>
+                <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 16px;">Canceling your subscription will downgrade your account back to Free. You will receive a prorated refund of <strong id="refund-amount">Rs 0</strong>.</p>
+                <button class="btn-secondary" style="border-color: #EF4444; color: #EF4444;" onclick="requestCancellation()">Request Cancellation & Refund</button>
+              </div>
+            </div>
+          </div>
+          
           <!-- General -->
           <div class="settings-panel active" data-panel="general">
             <h3 class="settings-panel-title">General Preferences</h3>
@@ -341,11 +434,6 @@
     <iframe class="exam-frame" id="file-viewer-frame" src=""></iframe>
   </div>
 
-  <!-- ADMIN FAB -->
-  <button class="admin-fab admin-only" id="admin-fab-btn" onclick="openAdminPanel('notes')">
-    Admin Upload
-  </button>
-
   <!-- ADMIN MODAL -->
   <div class="admin-modal" id="admin-modal">
     <div class="admin-modal-box">
@@ -359,6 +447,7 @@
         <button class="admin-tab-btn" data-tab="exams" onclick="switchAdminTab('exams')">Upload Exam</button>
         <button class="admin-tab-btn" data-tab="notices" onclick="switchAdminTab('notices')">Post Notice</button>
         <button class="admin-tab-btn" data-tab="responses" onclick="switchAdminTab('responses')">View Responses</button>
+        <button class="admin-tab-btn" data-tab="approvals" onclick="switchAdminTab('approvals'); loadPendingPayments();">Approvals</button>
       </div>
 
       <div class="admin-modal-body">
@@ -457,6 +546,80 @@
           <div id="admin-responses-list" style="display:flex; flex-direction:column; gap:12px;"></div>
         </div>
 
+        <!-- Approvals Panel -->
+        <div class="admin-tab-panel" data-panel="approvals" id="admin-panel-approvals">
+          <div style="font-size: 0.9rem; margin-bottom: 16px;">Approve or reject pending UTR payments.</div>
+          <div id="admin-approvals-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Chatbot UI -->
+  <div class="chat-launcher" onclick="toggleChat()">
+    <div class="chat-launcher-icon">✨</div>
+    <span class="chat-launcher-text">Ask AI</span>
+  </div>
+  
+  <div class="chat-window hidden" id="chat-window">
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <div class="chat-avatar">✨</div>
+        <div class="chat-title">StudyVault AI</div>
+      </div>
+      <button class="chat-close-btn" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-msg ai">Hello! I am your AI tutor. Ask me any question about your curriculum! (Demo Mode)</div>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Type a question..." autocomplete="off" onkeypress="if(event.key==='Enter') sendChatMessage()" />
+      <button class="chat-send-btn" onclick="sendChatMessage()">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- UPI PAYMENT MODAL -->
+  <div class="exam-active-overlay hidden" id="payment-overlay" style="backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+    <div class="payment-modal reveal-up" style="background: var(--bg-2); padding: 40px; border-radius: var(--r-xl); width: 750px; max-width: 95%; border: 1px solid var(--border); box-shadow: 0 24px 60px rgba(0,0,0,0.2);">
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h3 style="font-size: 1.5rem; font-weight: 800; color: var(--text-1); margin: 0;">Complete Your Subscription</h3>
+        <button class="close-btn" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: var(--text-3);" onclick="closePaymentModal()">×</button>
+      </div>
+
+      <div style="display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap;">
+        <!-- Left: QR Code -->
+        <div style="flex: 1; min-width: 250px; text-align: center; border-right: 1px dashed var(--border); padding-right: 40px;">
+          <div style="margin-bottom: 24px;">
+            <div id="payment-amount" style="font-size: 3rem; font-weight: 900; color: var(--text-1); line-height: 1;">Rs 99</div>
+            <p id="payment-subtitle" style="color: var(--text-2); font-size: 1rem; font-weight: 600; margin-top: 8px;">Lite Version</p>
+          </div>
+          <div style="background: #fff; padding: 16px; border-radius: 12px; display: inline-block; margin-bottom: 16px; box-shadow: var(--shadow-sm);">
+            <img id="payment-qr" src="" alt="UPI QR Code" style="width: 220px; height: 220px; display: block;" />
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-3); font-weight: 500;">Scan with PhonePe, GPay, Paytm or any UPI App.</p>
+        </div>
+        
+        <!-- Right: Verification Form -->
+        <div style="flex: 1; min-width: 250px; display: flex; flex-direction: column; justify-content: center;">
+          <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); padding: 16px; border-radius: 12px; margin-bottom: 24px;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: #D97706; margin-bottom: 8px;">How to proceed?</h4>
+            <ul style="font-size: 0.85rem; color: var(--text-2); margin: 0; padding-left: 20px; line-height: 1.5;">
+              <li>Open your UPI app.</li>
+              <li>Scan the QR code on the left.</li>
+              <li>Complete the payment.</li>
+              <li>Enter the 12-digit UTR/Reference number below.</li>
+            </ul>
+          </div>
+          
+          <label class="admin-label" style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-1); margin-bottom: 8px;">Enter UTR / Reference No.</label>
+          <input type="text" id="payment-utr" class="admin-input" style="width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text-1); font-size: 1rem; font-weight: 600; margin-bottom: 24px;" placeholder="e.g. 123456789012" />
+          
+          <button class="btn-premium" id="pay-now-btn" style="width: 100%; padding: 16px; font-size: 1.05rem; border-radius: 50px; border: none; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;" onclick="processPayment()">Verify Payment</button>
+        </div>
       </div>
     </div>
   </div>
