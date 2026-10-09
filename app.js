@@ -102,6 +102,8 @@ async function initAuth() {
   const setExpiry = qs('#settings-plan-expiry');
   const cancelBox = qs('#cancel-sub-box');
   const refAmt = qs('#refund-amount');
+  const refStatusBox = qs('#refund-status-box');
+  const refUtrDisplay = qs('#refund-utr-display');
   
   if (setPlan) {
     if (userProfile.subscription_tier === 'pro') {
@@ -118,6 +120,22 @@ async function initAuth() {
       setPlan.textContent = "Free Access";
       setExpiry.textContent = "Never expires";
       cancelBox.classList.add('hidden');
+    }
+
+    // Check for processed refunds
+    const { data: refunds } = await supabase.from('pending_payments')
+      .select('admin_utr, created_at')
+      .eq('user_id', currentUser.id)
+      .eq('status', 'approved')
+      .like('tier', 'cancel_%')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (refunds && refunds.length > 0 && refunds[0].admin_utr) {
+      refStatusBox.classList.remove('hidden');
+      refUtrDisplay.textContent = refunds[0].admin_utr;
+    } else {
+      refStatusBox.classList.add('hidden');
     }
   }
   
@@ -415,6 +433,12 @@ async function loadNotices() {
 
   list.innerHTML = data.map((n, i) => {
     const links = Array.isArray(n.links) ? n.links : [];
+    
+    let fileHtml = '';
+    if (n.file_url) {
+      fileHtml = `<button class="note-btn" style="background: var(--accent); color: white; border: none; margin-right: 8px;" onclick="openFileViewer('${n.file_url}', '${escHtml(n.title)}', 'free')">📄 Open Attachment</button>`;
+    }
+    
     return `
     <div class="note-card reveal-up ${i % 3 === 1 ? 'delay-1' : ''}" data-cat="${n.type}" style="margin-bottom: 16px;">
       <div class="note-icon-wrap" style="font-size: 1rem; font-weight: bold;">${n.type === 'important' ? '!' : n.type === 'deadlines' ? 'T' : 'i'}</div>
@@ -423,7 +447,10 @@ async function loadNotices() {
         <h3 class="note-title">${escHtml(n.title)}</h3>
         <p class="note-desc">${escHtml(n.body)}</p>
         <div class="note-footer">
-          ${links.length ? links.map(lk => `<a href="${escHtml(lk.url)}" target="_blank" class="note-btn">${escHtml(lk.label)}</a>`).join('') : '<div></div>'}
+          <div style="display:flex; align-items:center;">
+            ${fileHtml}
+            ${links.length ? links.map(lk => `<a href="${escHtml(lk.url)}" target="_blank" class="note-btn" style="margin-right: 8px;">${escHtml(lk.label)}</a>`).join('') : ''}
+          </div>
           ${adminMode ? `<button class="note-btn admin-del-btn" onclick="deleteNotice('${n.id}')">Delete</button>` : ''}
         </div>
       </div>
@@ -847,14 +874,32 @@ window.uploadNotice = async function() {
   const type = qs('#anot-type')?.value;
   const body = qs('#anot-body')?.value;
   const linkUrl = qs('#anot-link')?.value;
+  const file = qs('#anot-file')?.files[0];
   
   if (!title || !body) { showToast('Title and body required', 'error'); return; }
   
   const btn = qs('#post-notice-btn');
   btn.disabled = true; btn.textContent = 'Posting...';
   
+  let publicUrl = null;
+  let fileName = null;
+
+  if (file) {
+    const path = `notices/${Date.now()}_${file.name}`;
+    const { error: uploadError } = await supabase.storage.from('studyvault').upload(path, file);
+    if (uploadError) { 
+      showToast('Upload failed: ' + uploadError.message, 'error'); 
+      btn.disabled = false; btn.textContent = 'Post Notice'; 
+      return; 
+    }
+    publicUrl = supabase.storage.from('studyvault').getPublicUrl(path).data.publicUrl;
+    fileName = file.name;
+  }
+  
   const links = linkUrl ? [{ label: 'View Link', url: linkUrl }] : [];
-  const { error } = await supabase.from('notices').insert({ title, type, body, links });
+  const { error } = await supabase.from('notices').insert({ 
+    title, type, body, links, file_url: publicUrl, file_name: fileName 
+  });
   
   btn.disabled = false; btn.textContent = 'Post Notice';
   
@@ -1051,6 +1096,24 @@ window.processPayment = async function() {
 };
 
 window.requestCancellation = async function() {
+  if (userProfile?.subscription_expiry) {
+    const expiry = new Date(userProfile.subscription_expiry).getTime();
+    // Start date is approx 30 days before expiry
+    const startDate = expiry - (30 * 24 * 60 * 60 * 1000);
+    const daysSinceStart = (Date.now() - startDate) / (1000 * 60 * 60 * 24);
+    
+    if (daysSinceStart > 7) {
+      showToast('Cancellations and refunds are only allowed within the first 7 days of subscription.', 'error');
+      return;
+    }
+  }
+
+  const upiId = qs('#refund-upi-id').value.trim();
+  if (!upiId || !upiId.includes('@')) {
+    showToast('Please enter a valid UPI ID for the refund.', 'error');
+    return;
+  }
+
   if (!confirm('Are you sure you want to request a cancellation and refund?')) return;
   
   // Check for existing pending requests
@@ -1060,12 +1123,12 @@ window.requestCancellation = async function() {
     return;
   }
   
-  const refundAmount = userProfile.subscription_tier === 'pro' ? 'Rs 179' : 'Rs 89';
+  const refundAmount = userProfile.subscription_tier === 'pro' ? '179' : '89';
   const { error } = await supabase.from('pending_payments').insert({
     user_id: currentUser.id,
     user_email: currentUser.email,
     tier: 'cancel_' + userProfile.subscription_tier,
-    utr: `Refund Request: ${refundAmount}`,
+    utr: `Refund|${refundAmount}|${upiId}`,
     status: 'pending'
   });
   
@@ -1091,29 +1154,64 @@ window.loadPendingPayments = async function() {
     return;
   }
   
-  list.innerHTML = data.map(p => `
-    <div style="background: var(--bg-2); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
-      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-weight: bold; color: var(--text-1);">${escHtml(p.user_email)}</span>
-        <span style="background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${p.tier.toUpperCase()}</span>
+  list.innerHTML = data.map(p => {
+    let extraHtml = '';
+    let displayUtr = p.utr;
+    
+    if (p.tier.startsWith('cancel_') && p.utr.includes('|')) {
+      const parts = p.utr.split('|');
+      const amount = parts[1] || '0';
+      const upi = parts[2] || '';
+      displayUtr = `Refund Rs ${amount} to ${upi}`;
+      
+      const upiLink = `upi://pay?pa=${upi}&pn=StudyVault+Refund&am=${amount}`;
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiLink)}`;
+      
+      extraHtml = `
+        <div style="background: #fff; padding: 12px; border-radius: 8px; display: inline-block; margin-bottom: 12px; text-align: center;">
+          <img src="${qrUrl}" style="width: 120px; height: 120px;" alt="Refund QR" />
+          <div style="font-size: 0.75rem; color: #000; margin-top: 8px; font-weight: bold;">Scan to Refund Rs ${amount}</div>
+        </div>
+      `;
+    }
+    
+    return `
+      <div style="background: var(--bg-2); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-weight: bold; color: var(--text-1);">${escHtml(p.user_email)}</span>
+          <span style="background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${p.tier.toUpperCase()}</span>
+        </div>
+        <div style="font-size: 0.9rem; color: var(--text-2); margin-bottom: 12px;">
+          Details: <strong style="color: var(--text-1);">${escHtml(displayUtr)}</strong> <br/>
+          Date: ${fmt(p.created_at)}
+        </div>
+        ${extraHtml}
+        <div style="display: flex; gap: 8px;">
+          <button class="admin-submit-btn" style="flex: 1; padding: 8px;" onclick="handlePaymentApproval('${p.id}', '${p.user_id}', '${p.tier}', 'approved')">Approve</button>
+          <button class="btn-secondary" style="flex: 1; padding: 8px; border-color: red; color: red;" onclick="handlePaymentApproval('${p.id}', '${p.user_id}', '${p.tier}', 'rejected')">Reject</button>
+        </div>
       </div>
-      <div style="font-size: 0.9rem; color: var(--text-2); margin-bottom: 12px;">
-        UTR: <strong style="color: var(--text-1);">${escHtml(p.utr)}</strong> <br/>
-        Date: ${fmt(p.created_at)}
-      </div>
-      <div style="display: flex; gap: 8px;">
-        <button class="admin-submit-btn" style="flex: 1; padding: 8px;" onclick="handlePaymentApproval('${p.id}', '${p.user_id}', '${p.tier}', 'approved')">Approve</button>
-        <button class="btn-secondary" style="flex: 1; padding: 8px; border-color: red; color: red;" onclick="handlePaymentApproval('${p.id}', '${p.user_id}', '${p.tier}', 'rejected')">Reject</button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 };
 
 window.handlePaymentApproval = async function(paymentId, userId, tier, action) {
   if (!confirm(`Are you sure you want to ${action} this payment?`)) return;
   
+  let adminUtr = null;
+  if (action === 'approved' && tier.startsWith('cancel_')) {
+    adminUtr = prompt("Please enter the UTR / Transaction ID for the refund you just made to the user's UPI ID:");
+    if (!adminUtr) {
+      showToast('Cancellation approval cancelled. UTR is required.', 'error');
+      return;
+    }
+  }
+
   // Update status in pending_payments
-  const { error: pErr } = await supabase.from('pending_payments').update({ status: action }).eq('id', paymentId);
+  const updateData = { status: action };
+  if (adminUtr) updateData.admin_utr = adminUtr;
+  
+  const { error: pErr } = await supabase.from('pending_payments').update(updateData).eq('id', paymentId);
   if (pErr) return showToast('Error updating payment: ' + pErr.message, 'error');
   
   if (action === 'approved') {
@@ -1161,3 +1259,14 @@ window.checkAdminNotifications = async function() {
     badge.classList.remove('hidden');
   }
 };
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(registration => {
+      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+    }, err => {
+      console.log('ServiceWorker registration failed: ', err);
+    });
+  });
+}

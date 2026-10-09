@@ -48,6 +48,8 @@ CREATE TABLE notices (
   body        text NOT NULL,
   type        text NOT NULL CHECK (type IN ('important','resources','deadlines')),
   links       jsonb DEFAULT '[]',     
+  file_url    text,
+  file_name   text,
   created_at  timestamptz DEFAULT now()
 );
 
@@ -124,6 +126,7 @@ CREATE TABLE pending_payments (
   user_email text NOT NULL,
   tier text NOT NULL,
   utr text NOT NULL,
+  admin_utr text,
   status text DEFAULT 'pending',
   created_at timestamptz DEFAULT now()
 );

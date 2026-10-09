@@ -858,3 +858,89 @@ input:checked + .toggle-slider:before { transform: translateX(22px); }
   font-weight: 500;
 }
 .pricing-features li:last-child { border-bottom: none; }
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE APP ILLUSION (BOTTOM NAVIGATION & OPTIMIZATIONS)
+═══════════════════════════════════════════════════════ */
+.nav-icon { display: none; margin-right: 8px; }
+
+@media (max-width: 768px) {
+  /* Disable user text selection to feel like a native app */
+  body, .btn-secondary, .btn-premium, .nav-link, .course-card {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Shrink Top Navbar */
+  .navbar { height: 60px; padding-bottom: 0; }
+  .nav-inner { padding: 0 16px; }
+  #nav-logo-link span { font-size: 1.1rem; }
+  
+  /* Transform Top Links into a Fixed Bottom Navigation Bar */
+  .nav-links {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 65px;
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+    display: flex !important;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: env(safe-area-inset-bottom, 12px); /* For iPhone notch */
+    z-index: 9999;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+    border-radius: 0;
+    margin: 0;
+  }
+  
+  /* Hide the liquid slider bg on mobile */
+  .nav-liquid-bg { display: none !important; }
+  
+  .nav-links li { display: flex; flex: 1; justify-content: center; }
+  
+  /* Style the links as vertical Tab icons */
+  .nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    margin: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-3);
+    border-radius: 12px;
+    background: transparent;
+    transition: all 0.2s;
+  }
+  
+  .nav-icon { display: block; margin-right: 0; margin-bottom: 4px; }
+  .nav-link.active { 
+    color: var(--text-inv) !important; 
+    background: var(--accent) !important; 
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  }
+  .nav-premium { color: var(--text-3) !important; }
+  .nav-premium.active { color: #fff !important; background: #F59E0B !important; }
+  
+  /* Adjust Main Content to not hide behind bottom nav */
+  .container { padding-bottom: 110px; padding-top: 20px; }
+  
+  /* Make cards full width to save space */
+  .home-main { flex-direction: column; }
+  .home-sidebar { display: none; } /* Hide sidebar on mobile */
+  
+  .notes-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; gap: 24px; padding: 16px; }
+  .pricing-card { transform: scale(1) !important; }
+  
+  /* Native-style active click ripple */
+  .btn-secondary:active, .btn-premium:active, .course-card:active {
+    transform: scale(0.96);
+    transition: transform 0.1s;
+  }
+}
